@@ -1,0 +1,25 @@
+{
+  "name": "gsb-0003",
+  "version": "1.0.0",
+  "description": "对应题目见 ../solo0-1_第一批.md。",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Miner407/gsb-0003.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Miner407/gsb-0003/issues"
+  },
+  "homepage": "https://github.com/Miner407/gsb-0003#readme",
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "express": "^5.2.1"
+  }
+}

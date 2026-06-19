@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>订阅账单管理</title>
+<style>
+:root {
+  --bg: #f0f2f5;
+  --card: #ffffff;
+  --primary: #4f46e5;
+  --primary-light: #e0e7ff;
+  --danger: #ef4444;
+  --danger-light: #fef2f2;
+  --success: #10b981;
+  --success-light: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-light: #fffbeb;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --border: #e2e8f0;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+header { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; padding: 32px 24px 24px; }
+header h1 { font-size: 24px; font-weight: 700; }
+header p { font-size: 14px; opacity: .85; margin-top: 4px; }
+
+.container { max-width: 960px; margin: 0 auto; padding: 20px 16px 40px; }
+
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.stat-card .label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+.stat-card .value { font-size: 28px; font-weight: 700; }
+.stat-card .value.monthly { color: var(--primary); }
+.stat-card .value.upcoming { color: var(--warning); }
+
+.section-title { font-size: 16px; font-weight: 600; margin: 24px 0 12px; display: flex; align-items: center; gap: 8px; }
+.section-title span.badge { background: var(--primary-light); color: var(--primary); font-size: 12px; padding: 2px 8px; border-radius: 99px; }
+
+.card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+
+.category-bar { display: flex; flex-direction: column; gap: 10px; }
+.cat-row { display: flex; align-items: center; gap: 12px; }
+.cat-label { width: 80px; font-size: 13px; font-weight: 500; text-align: right; flex-shrink: 0; }
+.cat-track { flex: 1; height: 24px; background: var(--bg); border-radius: 6px; overflow: hidden; position: relative; }
+.cat-fill { height: 100%; border-radius: 6px; transition: width .4s ease; }
+.cat-pct { font-size: 12px; color: var(--text-secondary); width: 50px; flex-shrink: 0; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .15s; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: #4338ca; }
+.btn-danger { background: var(--danger-light); color: var(--danger); }
+.btn-danger:hover { background: var(--danger); color: #fff; }
+.btn-success { background: var(--success-light); color: var(--success); }
+.btn-success:hover { background: var(--success); color: #fff; }
+.btn-warning { background: var(--warning-light); color: var(--warning); }
+.btn-warning:hover { background: var(--warning); color: #fff; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+.actions-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.filter-group { display: flex; gap: 6px; margin-left: auto; }
+.filter-btn { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); font-size: 13px; cursor: pointer; }
+.filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; padding: 10px 8px; color: var(--text-secondary); font-weight: 500; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid var(--border); }
+td { padding: 12px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:hover td { background: #f8fafc; }
+.cycle-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+.cycle-monthly { background: #dbeafe; color: #1d4ed8; }
+.cycle-quarterly { background: #fef3c7; color: #b45309; }
+.cycle-yearly { background: #d1fae5; color: #047857; }
+.status-active { color: var(--success); font-weight: 500; }
+.status-inactive { color: var(--text-secondary); }
+.td-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; justify-content: center; align-items: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--card); border-radius: var(--radius); padding: 28px; width: 90%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,.15); }
+.modal h2 { font-size: 18px; margin-bottom: 20px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; color: var(--text-secondary); }
+.form-group input, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border .15s; }
+.form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+.help-box { background: var(--primary-light); border-radius: var(--radius); padding: 20px; margin-top: 24px; }
+.help-box h3 { font-size: 15px; margin-bottom: 10px; color: var(--primary); }
+.help-box ul { padding-left: 20px; font-size: 13px; line-height: 1.8; color: var(--text-secondary); }
+.help-box code { background: #fff; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+.empty-state p { font-size: 15px; }
+
+@media(max-width:640px) {
+  .stats-row { grid-template-columns: 1fr; }
+  table { font-size: 12px; }
+  th, td { padding: 8px 4px; }
+  .td-actions { gap: 4px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>💳 订阅账单管理</h1>
+  <p>管理你的会员订阅，掌控每月支出</p>
+</header>
+
+<div class="container">
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="label">本月预计支出</div>
+      <div class="value monthly" id="statMonthly">¥0.00</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">未来30天扣费提醒</div>
+      <div class="value upcoming" id="statUpcoming">0 项</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">活跃订阅数</div>
+      <div class="value" id="statCount" style="color:var(--success)">0</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">📊 分类月均占比</div>
+    <div class="category-bar" id="categoryBar"></div>
+  </div>
+
+  <div class="actions-bar">
+    <button class="btn btn-primary" onclick="openModal()">＋ 新增订阅</button>
+    <div class="filter-group">
+      <button class="filter-btn active" data-status="active" onclick="setFilter(this,'active')">活跃</button>
+      <button class="filter-btn" data-status="inactive" onclick="setFilter(this,'inactive')">已停用</button>
+      <button class="filter-btn" data-status="all" onclick="setFilter(this,'all')">全部</button>
+    </div>
+  </div>
+
+  <div class="card" style="padding:0; overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>会员名称</th>
+          <th>金额</th>
+          <th>周期</th>
+          <th>下次扣费日</th>
+          <th>分类</th>
+          <th>状态</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <p>暂无订阅记录，点击「新增订阅」开始添加</p>
+    </div>
+  </div>
+
+  <div class="help-box">
+    <h3>📖 操作说明</h3>
+    <ul>
+      <li><strong>新增订阅</strong>：点击「＋ 新增订阅」按钮，填写会员名称、金额、扣费周期、下次扣费日和分类</li>
+      <li><strong>停用订阅</strong>：点击列表中的「停用」按钮，该订阅不再计入统计</li>
+      <li><strong>续费更新</strong>：点击「续费」按钮，系统自动根据扣费周期计算并更新下次扣费日，状态恢复为活跃</li>
+      <li><strong>编辑订阅</strong>：点击「编辑」按钮，可修改订阅的各项信息</li>
+      <li><strong>删除订阅</strong>：点击「删除」按钮永久移除该订阅记录</li>
+      <li><strong>筛选状态</strong>：使用列表上方的「活跃 / 已停用 / 全部」按钮筛选不同状态的订阅</li>
+      <li><strong>扣费周期说明</strong>：<code>monthly</code>=每月, <code>quarterly</code>=每季, <code>yearly</code>=每年</li>
+      <li><strong>月均金额</strong>：按周期折算，季度金额÷3、年费金额÷12，汇总为本月预计支出</li>
+      <li><strong>分类占比</strong>：按分类统计月均金额，显示各分类占总支出的百分比</li>
+    </ul>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle">新增订阅</h2>
+    <input type="hidden" id="editId">
+    <div class="form-group">
+      <label>会员名称</label>
+      <input type="text" id="fName" placeholder="如：Netflix、iCloud">
+    </div>
+    <div class="form-group">
+      <label>金额（元）</label>
+      <input type="number" id="fAmount" step="0.01" min="0" placeholder="0.00">
+    </div>
+    <div class="form-group">
+      <label>扣费周期</label>
+      <select id="fCycle">
+        <option value="monthly">每月 (monthly)</option>
+        <option value="quarterly">每季 (quarterly)</option>
+        <option value="yearly">每年 (yearly)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>下次扣费日</label>
+      <input type="date" id="fNextDate">
+    </div>
+    <div class="form-group">
+      <label>分类</label>
+      <select id="fCategory">
+        <option value="影音娱乐">影音娱乐</option>
+        <option value="工具软件">工具软件</option>
+        <option value="云存储">云存储</option>
+        <option value="学习教育">学习教育</option>
+        <option value="游戏">游戏</option>
+        <option value="其他">其他</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" style="background:var(--bg)" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveSub()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CYCLE_LABEL = { monthly: '每月', quarterly: '每季', yearly: '每年' };
+const CAT_COLORS = ['#4f46e5','#7c3aed','#ec4899','#f59e0b','#10b981','#06b6d4','#8b5cf6','#ef4444'];
+let currentFilter = 'active';
+
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch('/api' + path, opts);
+  return res.json();
+}
+
+async function loadAll() {
+  const [list, monthly, upcoming, category] = await Promise.all([
+    api('GET', '/subscriptions?status=' + (currentFilter === 'all' ? '' : currentFilter)),
+    api('GET', '/stats/monthly'),
+    api('GET', '/stats/upcoming'),
+    api('GET', '/stats/category'),
+  ]);
+  renderTable(currentFilter === 'all' ? list : list);
+  document.getElementById('statMonthly').textContent = '¥' + monthly.monthly_estimated.toFixed(2);
+  document.getElementById('statUpcoming').textContent = upcoming.length + ' 项';
+  const activeCount = currentFilter === 'all'
+    ? list.filter(r => r.status === 'active').length
+    : currentFilter === 'active' ? list.length : 0;
+  document.getElementById('statCount').textContent = activeCount;
+  renderCategory(category);
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+  if (!rows.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td><strong>${esc(r.name)}</strong></td>
+      <td>¥${r.amount.toFixed(2)}</td>
+      <td><span class="cycle-tag cycle-${r.cycle}">${CYCLE_LABEL[r.cycle]}</span></td>
+      <td>${r.next_billing_date}</td>
+      <td>${esc(r.category)}</td>
+      <td class="status-${r.status}">${r.status === 'active' ? '活跃' : '已停用'}</td>
+      <td class="td-actions">
+        ${r.status === 'active' ? `<button class="btn btn-warning btn-sm" onclick="deactivateSub(${r.id})">停用</button>` : `<button class="btn btn-success btn-sm" onclick="renewSub(${r.id})">续费</button>`}
+        <button class="btn btn-primary btn-sm" onclick="editSub(${r.id})">编辑</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSub(${r.id})">删除</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderCategory(data) {
+  const bar = document.getElementById('categoryBar');
+  if (!data.length) { bar.innerHTML = '<div style="font-size:13px;color:var(--text-secondary)">暂无分类数据</div>'; return; }
+  bar.innerHTML = data.map((r, i) => `
+    <div class="cat-row">
+      <div class="cat-label">${esc(r.category)}</div>
+      <div class="cat-track">
+        <div class="cat-fill" style="width:${r.percentage}%;background:${CAT_COLORS[i % CAT_COLORS.length]}"></div>
+      </div>
+      <div class="cat-pct">${r.percentage}%  ¥${r.monthly_amount}</div>
+    </div>
+  `).join('');
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function openModal(sub) {
+  document.getElementById('editId').value = sub ? sub.id : '';
+  document.getElementById('modalTitle').textContent = sub ? '编辑订阅' : '新增订阅';
+  document.getElementById('fName').value = sub ? sub.name : '';
+  document.getElementById('fAmount').value = sub ? sub.amount : '';
+  document.getElementById('fCycle').value = sub ? sub.cycle : 'monthly';
+  document.getElementById('fNextDate').value = sub ? sub.next_billing_date : '';
+  document.getElementById('fCategory').value = sub ? sub.category : '影音娱乐';
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+async function saveSub() {
+  const id = document.getElementById('editId').value;
+  const body = {
+    name: document.getElementById('fName').value.trim(),
+    amount: parseFloat(document.getElementById('fAmount').value),
+    cycle: document.getElementById('fCycle').value,
+    next_billing_date: document.getElementById('fNextDate').value,
+    category: document.getElementById('fCategory').value,
+  };
+  if (!body.name || !body.amount || !body.next_billing_date) { alert('请填写完整信息'); return; }
+  if (id) { await api('PUT', '/subscriptions/' + id, body); } else { await api('POST', '/subscriptions', body); }
+  closeModal();
+  loadAll();
+}
+
+async function editSub(id) {
+  const sub = await api('GET', '/subscriptions/' + id);
+  openModal(sub);
+}
+async function deactivateSub(id) { if (confirm('确认停用该订阅？')) { await api('PUT', '/subscriptions/' + id + '/deactivate'); loadAll(); } }
+async function renewSub(id) { if (confirm('确认续费？下次扣费日将自动更新')) { await api('PUT', '/subscriptions/' + id + '/renew'); loadAll(); } }
+async function deleteSub(id) { if (confirm('确认删除该订阅？此操作不可恢复')) { await api('DELETE', '/subscriptions/' + id); loadAll(); } }
+
+function setFilter(btn, status) {
+  currentFilter = status;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadAll();
+}
+
+document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+loadAll();
+</script>
+</body>
+</html>
